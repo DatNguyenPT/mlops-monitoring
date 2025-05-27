@@ -34,31 +34,37 @@ import mlflow.tensorflow
 import mlflow.keras
 from mlflow.models.signature import infer_signature
 import warnings
+import s3fs 
 warnings.filterwarnings("ignore")
 
 from utils.tunning import *
 
-def data_preperation(data_path, seed=1802):
-    seed = 1802
 
+def data_preperation(bucket_name='data', seed=1802):
     np.random.seed(seed)
     tf.random.set_seed(seed)
 
-    for dir_name, _, file_names in os.walk(data_path):
-        for file_name in file_names:
-            print(os.path.join(dir_name, file_name))
+    s3_prefix = f's3://{bucket_name}'
 
-    df_1 = pd.read_parquet(f'{data_path}/Benign-Monday-no-metadata.parquet')
-    df_2 = pd.read_parquet(f'{data_path}/Bruteforce-Tuesday-no-metadata.parquet')
-    df_3 = pd.read_parquet(f'{data_path}/Portscan-Friday-no-metadata.parquet')
-    df_4 = pd.read_parquet(f'{data_path}/WebAttacks-Thursday-no-metadata.parquet')
-    df_5 = pd.read_parquet(f'{data_path}/DoS-Wednesday-no-metadata.parquet')
-    df_6 = pd.read_parquet(f'{data_path}/DDoS-Friday-no-metadata.parquet')
-    df_7 = pd.read_parquet(f'{data_path}/Infiltration-Thursday-no-metadata.parquet')
-    df_8 = pd.read_parquet(f'{data_path}/Botnet-Friday-no-metadata.parquet')
+    file_paths = [
+        'Benign-Monday-no-metadata.parquet',
+        'Bruteforce-Tuesday-no-metadata.parquet',
+        'Portscan-Friday-no-metadata.parquet',
+        'WebAttacks-Thursday-no-metadata.parquet',
+        'DoS-Wednesday-no-metadata.parquet',
+        'DDoS-Friday-no-metadata.parquet',
+        'Infiltration-Thursday-no-metadata.parquet',
+        'Botnet-Friday-no-metadata.parquet'
+    ]
 
-    # Concatenating df
-    df = pd.concat([df_1, df_2, df_3, df_4, df_5, df_6, df_7, df_8], axis=0, ignore_index=True)
+    dataframes = []
+    for file_name in file_paths:
+        full_path = f'{s3_prefix}/{file_name}'
+        print(f"Loading: {full_path}")
+        df = pd.read_parquet(full_path, engine='pyarrow')  # or engine='fastparquet'
+        dataframes.append(df)
+
+    df = pd.concat(dataframes, axis=0, ignore_index=True)
     df.info()
     return df
 
